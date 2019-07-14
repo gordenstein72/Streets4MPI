@@ -54,7 +54,7 @@ COPY project/requirements.txt .
 RUN sudo pip2.7 install -r requirements.txt
 
 # Clean up downloaded files
-#RUN rm
+RUN sudo rm -r Python-2.7.16* get-pip.py $TCB*
 
 # # ------------------------------------------------------------
 # Copy over project code
