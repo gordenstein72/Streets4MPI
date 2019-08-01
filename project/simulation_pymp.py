@@ -29,6 +29,7 @@ from operator import itemgetter
 from settings import settings
 from streetnetwork import StreetNetwork
 
+import pymp
 
 # This class does the actual simulation steps
 class Simulation(object):
@@ -62,29 +63,32 @@ class Simulation(object):
 
             self.street_network.set_driving_time(street, driving_time)
 
-        # reset traffic load
-        self.traffic_load = array("I", repeat(0, self.street_network.street_index))
-	print type(self.traffic_load)
-	print len(self.traffic_load)
-        origin_nr = 0
-        for origin in self.trips.keys():
-            # calculate all shortest paths from resident to every other node
-            origin_nr += 1
-            self.log_callback("Origin nr", str(origin_nr) + "...")
-            paths = self.street_network.calculate_shortest_paths(origin)
+        # reset traffic load	
+        #self.traffic_load = array("I", repeat(0, self.street_network.street_index))
+	self.traffic_load = pymp.shared.array(len(self.street_network.street_index) , dtype='uint8' )
+	
+	origin_nr = pymp.shared.array((1,), dtype='uint8')
+        with pymp.Parallel(4) as p:
+		for origin in p.range(0, len(self.trips.keys())):
+		#p.print(p.num_threads, p.thread_num) 
+		#for origin in self.trips.keys():
+		    # calculate all shortest paths from resident to every other node
+		    origin_nr[0] += 1
+		    self.log_callback("Origin nr", str(origin_nr[0]) + "...")
+		    paths = self.street_network.calculate_shortest_paths(origin)
 
-            # increase traffic load
-            for goal in self.trips[origin]:
-                # is the goal even reachable at all? if not, ignore for now
-                if goal in paths:
-                    # hop along the edges until we're there
-                    current = goal
-                    while current != origin:
-                        street = (min(current, paths[current]), max(current, paths[current]))
-                        current = paths[current]
-                        usage = settings["trip_volume"]
-                        street_index = self.street_network.get_street_index(street)
-                        self.traffic_load[street_index] += usage
+		    # increase traffic load
+		    for goal in self.trips[origin]:
+			# is the goal even reachable at all? if not, ignore for now
+			if goal in paths:
+			    # hop along the edges until we're there
+			    current = goal
+			    while current != origin:
+				street = (min(current, paths[current]), max(current, paths[current]))
+				current = paths[current]
+				usage = settings["trip_volume"]
+				street_index = self.street_network.get_street_index(street)
+				self.traffic_load[street_index] += usage
 
     def road_construction(self):
         dict_traffic_load = dict()
