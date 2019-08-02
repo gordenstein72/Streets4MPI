@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # simulation.py
-# Copyright 2012 Julian Fietkau <http://www.julian-fietkau.de/>, 
+# Copyright 2012 Julian Fietkau <http://www.julian-fietkau.de/>,
 #                Joachim Nitschke
 #
 # This file is part of Streets4MPI.
@@ -28,19 +28,23 @@ from operator import itemgetter
 
 from settings import settings
 from streetnetwork import StreetNetwork
-
+import copy
 import pymp
+
+global pymp_s_n
 
 # This class does the actual simulation steps
 class Simulation(object):
 
     def __init__(self, street_network, trips, jam_tolerance, log_callback):
-        self.street_network = street_network
+        self.street_network = street_network  # pymp.shared.array( street_network, dtype = 'uint8')
+        print(type(street_network))
         self.trips = trips
         self.jam_tolerance = jam_tolerance
         self.log_callback = log_callback
         self.step_counter = 0
-        self.traffic_load = array("I", repeat(0, self.street_network.street_index))
+       # self.traffic_load = array("I", repeat(0, self.street_network.street_index))
+        self.traffic_load = pymp.shared.array((self.street_network.street_index) , dtype='uint8' )
 
         self.cumulative_traffic_load = None
 
@@ -63,32 +67,42 @@ class Simulation(object):
 
             self.street_network.set_driving_time(street, driving_time)
 
-        # reset traffic load	
+        # reset traffic load
         #self.traffic_load = array("I", repeat(0, self.street_network.street_index))
-	self.traffic_load = pymp.shared.array(len(self.street_network.street_index) , dtype='uint8' )
-	
-	origin_nr = pymp.shared.array((1,), dtype='uint8')
-        with pymp.Parallel(4) as p:
-		for origin in p.range(0, len(self.trips.keys())):
-		#p.print(p.num_threads, p.thread_num) 
-		#for origin in self.trips.keys():
-		    # calculate all shortest paths from resident to every other node
-		    origin_nr[0] += 1
-		    self.log_callback("Origin nr", str(origin_nr[0]) + "...")
-		    paths = self.street_network.calculate_shortest_paths(origin)
+        self.traffic_load = pymp.shared.array((self.street_network.street_index) , dtype='uint8' )
 
-		    # increase traffic load
-		    for goal in self.trips[origin]:
-			# is the goal even reachable at all? if not, ignore for now
-			if goal in paths:
-			    # hop along the edges until we're there
-			    current = goal
-			    while current != origin:
-				street = (min(current, paths[current]), max(current, paths[current]))
-				current = paths[current]
-				usage = settings["trip_volume"]
-				street_index = self.street_network.get_street_index(street)
-				self.traffic_load[street_index] += usage
+        global pymp_s_n
+        pymp_s_n = copy.deepcopy(self.street_network)
+        global pymp_t_l
+        pymp_t_l = copy.deepcopy(self.traffic_load )
+s        with pymp.Parallel(4) as p:
+            global pymp_s_n
+            self.log_callback(len(pymp_t_l))
+            for origin in p.range(0, len(self.trips.keys())):
+            #p.print(p.num_threads, p.thread_num)
+            #for origin in self.trips.keys():
+                # calculate all shortest paths from resident to every other node
+                origin_nr[0] += 1
+                self.log_callback("Origin nr", str(origin_nr[0]) + "...")
+                paths = pymp_s_n.calculate_shortest_paths(origin)
+
+                # increase traffic load
+                for goal in self.trips[origin]:
+                # is the goal even reachable at all? if not, ignore for now
+                    if goal in paths:
+                        # hop along the edges until we're there
+                        current = goal
+                        while current != origin:
+                            street = (min(current, paths[current]), max(current, paths[current]))
+                            current = paths[current]
+                            usage = settings["trip_volume"]
+                            street_index = pymp_s_n.get_street_index(street)
+                            #self.traffic_load[street_index] += usage
+                            self.log_callback(street_index)
+                            self.log_callback(type(street_index))
+                            pymp_t_l[street_index] += usage
+        global pymp_s_n
+        self.street_network = copy.deepcopy(pymp_s_n)
 
     def road_construction(self):
         dict_traffic_load = dict()
