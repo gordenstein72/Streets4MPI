@@ -79,6 +79,7 @@ class Streets4MultiProcessing(object):
 
 # slave function
 ProcessObjects = []
+core_count = settings["core_count"]
 for core in range(multiprocessing.cpu_count() - 1):
     test = Streets4MultiProcessing()
     ProcessObjects.append(test)
@@ -139,7 +140,7 @@ def main():
     MasterStreets4MultiProcessing = Streets4MultiProcessing()
 
     # Only set as large as many real cores on system (hyper-threaded in intel)
-    core_count = multiprocessing.cpu_count()
+    core_count = settings["core_count"]
     pool = Pool(processes=core_count)
     proc_chunks = []
     residents = settings["number_of_residents"]
