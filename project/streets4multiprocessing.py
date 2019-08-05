@@ -84,7 +84,7 @@ residents = settings["number_of_residents"]
 if residents % core_count != 0:
     remainder = residents % core_count
     proc_chunk_count = residents / core_count
-    for x in range(core_count - 1):
+    for x in range(core_count):
         process_chunks.append(proc_chunk_count)
     process_chunks[-1] = proc_chunk_count + remainder
 else:
@@ -93,7 +93,7 @@ else:
     for x in range(core_count):
         process_chunks.append(proc_chunk_count)
 
-for core in range(core_count - 1):
+for core in range(core_count):
     # print("Creating global obj {}".format(core))
     test = Streets4MultiProcessing(num_residents=process_chunks[core])
     ProcessObjects.append(test)
@@ -170,7 +170,7 @@ def main():
     if residents % core_count != 0:
         remainder = residents % core_count
         proc_chunk_count = residents / core_count
-        for x in range(core_count - 1):
+        for x in range(core_count):
             proc_chunks.append(proc_chunk_count)
         proc_chunks[-1] = proc_chunk_count + remainder
     else:
