@@ -20,22 +20,24 @@
 # You should have received a copy of the GNU General Public License
 # along with Streets4MPI.  If not, see <http://www.gnu.org/licenses/>.
 #
+import gc
 import time
 import timeit
-from datetime import datetime
-from random import random, randint
-from random import seed
 from array import array
 from itertools import repeat
+from random import random
+from random import seed
 
 from mpi4py import MPI
 
 from osmdata import GraphBuilder
-from tripgenerator import TripGenerator
-from simulation import Simulation
-from settings import settings
 from persistence import persist_write
+from settings import settings
+from simulation import Simulation
+from tripgenerator import TripGenerator
 from utils import merge_arrays
+
+global core_count
 
 
 # This class runs the Streets4MPI program.
@@ -46,6 +48,8 @@ class Streets4MPI(object):
         communicator = MPI.COMM_WORLD
         self.process_rank = communicator.Get_rank()
         number_of_processes = communicator.Get_size()
+        global core_count
+        core_count = number_of_processes
 
         self.log("Welcome to Streets4MPI!")
         if self.process_rank == 0:
@@ -71,7 +75,6 @@ class Streets4MPI(object):
         trip_generator = TripGenerator()
         # distribute residents over processes
         number_of_residents = settings["number_of_residents"] / number_of_processes
-        self.log("Number of residents == " + str(number_of_residents))
         if settings["use_residential_origins"]:
             potential_origins = data.connected_residential_nodes
         else:
@@ -105,30 +108,39 @@ class Streets4MPI(object):
 
             if self.process_rank == 0 and settings["persist_traffic_load"]:
                 self.log_indent("Saving traffic load to disk...")
-                print len(total_traffic_load)
+                # print len(total_traffic_load)
                 persist_write("traffic_load_" + str(step + 1) + ".s4mpi", total_traffic_load, is_array=True)
 
             del total_traffic_load
 
         if self.process_rank == 0:
             end = time.time()
-            print end - start
+            total = 0
+            for obj in gc.get_objects():
+                if isinstance(obj, Streets4MPI):
+                    total += 1
+            print "Simulation object instances left: {}".format(total)
+
+            # print end - start
         self.log("Done!")
 
     def log(self, *output):
-        if (settings["logging"] == "stdout"):
-            print "[ %s ][ p%d ]" % (datetime.now(), self.process_rank),
-            for o in output:
-                print o,
-            print ""
+        pass
+        # if (settings["logging"] == "stdout"):
+        #     print "[ %s ][ p%d ]" % (datetime.now(), self.process_rank),
+        #     for o in output:
+        #         print o,
+        #     print ""
 
     def log_indent(self, *output):
-        if (settings["logging"] == "stdout"):
-            print "[ %s ][ p%d ]  " % (datetime.now(), self.process_rank),
-            for o in output:
-                print o,
-            print ""
+        pass
+        # if (settings["logging"] == "stdout"):
+        #     print "[ %s ][ p%d ]  " % (datetime.now(), self.process_rank),
+        #     for o in output:
+        #         print o,
+        #     print ""
 
 
 if __name__ == "__main__":
-    Streets4MPI()
+    print "Time was {} with {} residents and {} sub-processes".format(timeit.timeit(stmt=Streets4MPI, number=1),
+                                                                      settings["number_of_residents"], core_count)

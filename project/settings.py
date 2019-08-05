@@ -30,8 +30,9 @@ settings = {
     "random_seed": randint(a=1, b=100),  # set to None to use system time
 
     # simulation settings
-    "max_simulation_steps": 100,
-    "number_of_residents": 10000000,
+    "cpu_count": 8,
+    "max_simulation_steps": 10,
+    "number_of_residents": 10000,
     "use_residential_origins": False,
     # period over which the traffic is distributed (24h = the hole day)
     "traffic_period_duration": 24,  # h
