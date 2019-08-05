@@ -199,5 +199,5 @@ def main():
 
 # master process entry logic
 if __name__ == '__main__':
-    print "Time was {} with {} residents and {} sub-processes".format(timeit.timeit(stmt=main, number=1),
-                                                                     settings["number_of_residents"], core_count)
+    print "Running . . ."
+    print "Time was {} with {} residents and {} sub-processes".format(timeit.timeit(stmt=main, number=1),settings["number_of_residents"], core_count)
